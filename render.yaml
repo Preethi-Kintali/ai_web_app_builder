@@ -19,7 +19,7 @@ services:
         value: production
 
   # 2. Frontend (React/Vite Static Site)
-  - type: static
+  - type: static_site
     name: prompt2page-builder
     runtime: web
     rootDir: client
