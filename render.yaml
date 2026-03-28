@@ -30,7 +30,7 @@ services:
         fromService:
           type: web
           name: prompt2page-api
-          property: url
+          property: host
     # Redirect all routes to index.html for React SPA
     routes:
       - type: rewrite

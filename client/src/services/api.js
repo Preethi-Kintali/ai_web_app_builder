@@ -1,7 +1,13 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+let BASE_URL = 'http://localhost:5000/api';
+const envBase = import.meta.env.VITE_API_BASE_URL;
+if (envBase) {
+  const needsProtocol = !envBase.startsWith('http://') && !envBase.startsWith('https://');
+  const host = needsProtocol ? `https://${envBase}` : envBase;
+  BASE_URL = host.endsWith('/api') ? host : `${host}/api`;
+}
 
 const getHeaders = () => {
   const token = Cookies.get('token');
