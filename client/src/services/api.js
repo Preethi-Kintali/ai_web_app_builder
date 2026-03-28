@@ -9,11 +9,8 @@ if (envBase) {
   const host = needsProtocol ? `https://${envBase}` : envBase;
   BASE_URL = host.endsWith('/api') ? host : `${host}/api`;
 } else if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
-  // Render Blueprint 'fromService' sync is notoriously flaky during static site builds.
-  // We can automatically deduce the API url by swapping '-builder' with '-api'.
-  const builderHost = window.location.hostname;
-  const apiHost = builderHost.replace('builder', 'api');
-  BASE_URL = `https://${apiHost}/api`;
+  // Hardcoded to exact known Render API URL to bypass random suffix mapping issues
+  BASE_URL = 'https://prompt2page-api-sqaa.onrender.com/api';
 }
 
 const getHeaders = () => {
