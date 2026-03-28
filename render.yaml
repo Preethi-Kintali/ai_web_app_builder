@@ -1,0 +1,40 @@
+services:
+  # 1. Backend (Node.js Web Service)
+  - type: web
+    name: prompt2page-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    rootDir: server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false # User must set in Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false # User must set in Render dashboard
+      - key: JWT_SECRET
+        sync: false # User must set in Render dashboard
+      - key: NETLIFY_TOKEN
+        sync: false # (Optional)
+
+  # 2. Frontend (React/Vite Static Site)
+  - type: static
+    name: prompt2page-builder
+    runtime: web
+    rootDir: client
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: prompt2page-api
+          property: host
+    # Redirect all routes to index.html for React SPA
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

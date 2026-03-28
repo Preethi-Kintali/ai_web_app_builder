@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+client/node_modules
+server/node_modules
+
+# Environment
+.env
+client/.env
+server/.env
+
+# Build Output
+dist
+client/dist
+build
+
+# Misc
+.DS_Store
+*.log
+.vscode
+.idea
+.gemini
+tmp
