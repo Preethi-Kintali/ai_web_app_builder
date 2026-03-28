@@ -15,7 +15,18 @@ const start = async () => {
 
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', process.env.FRONTEND_URL].filter(Boolean),
+      origin: function (origin, callback) {
+        const allowedPatterns = [
+          /^http:\/\/localhost:\d+$/,
+          /\.onrender\.com$/,
+          /^https?:\/\//
+        ];
+        if (!origin || allowedPatterns.some(pattern => pattern.test(origin)) || origin === process.env.FRONTEND_URL) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

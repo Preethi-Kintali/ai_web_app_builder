@@ -6,7 +6,18 @@ import { errorMiddleware } from './middleware/error.middleware.js';
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', process.env.FRONTEND_URL].filter(Boolean),
+  origin: function (origin, callback) {
+    const allowedPatterns = [
+      /^http:\/\/localhost:\d+$/,
+      /\.onrender\.com$/,
+      /^https?:\/\// // Fallback if FRONTEND_URL is set or testing
+    ];
+    if (!origin || allowedPatterns.some(pattern => pattern.test(origin)) || origin === process.env.FRONTEND_URL) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
