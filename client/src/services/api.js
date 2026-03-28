@@ -3,10 +3,17 @@ import Cookies from 'js-cookie';
 
 let BASE_URL = 'http://localhost:5000/api';
 const envBase = import.meta.env.VITE_API_BASE_URL;
+
 if (envBase) {
   const needsProtocol = !envBase.startsWith('http://') && !envBase.startsWith('https://');
   const host = needsProtocol ? `https://${envBase}` : envBase;
   BASE_URL = host.endsWith('/api') ? host : `${host}/api`;
+} else if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+  // Render Blueprint 'fromService' sync is notoriously flaky during static site builds.
+  // We can automatically deduce the API url by swapping '-builder' with '-api'.
+  const builderHost = window.location.hostname;
+  const apiHost = builderHost.replace('builder', 'api');
+  BASE_URL = `https://${apiHost}/api`;
 }
 
 const getHeaders = () => {
