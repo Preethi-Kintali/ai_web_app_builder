@@ -7,18 +7,16 @@ services:
     startCommand: npm start
     rootDir: server
     envVars:
-      - key: NODE_ENV
-        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
       - key: PORT
         value: 5000
-      - key: MONGODB_URI
-        sync: false # User must set in Render dashboard
-      - key: GEMINI_API_KEY
-        sync: false # User must set in Render dashboard
-      - key: JWT_SECRET
-        sync: false # User must set in Render dashboard
-      - key: NETLIFY_TOKEN
-        sync: false # (Optional)
+      - key: NODE_ENV
+        value: production
 
   # 2. Frontend (React/Vite Static Site)
   - type: static
@@ -32,7 +30,7 @@ services:
         fromService:
           type: web
           name: prompt2page-api
-          property: host
+          property: url
     # Redirect all routes to index.html for React SPA
     routes:
       - type: rewrite
