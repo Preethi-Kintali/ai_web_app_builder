@@ -19,10 +19,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: prompt2page-builder
-          property: host
+        value: https://prompt2page-builder.onrender.com
 
   # 2. Frontend (React/Vite Static Site)
   - type: web
@@ -33,10 +30,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: prompt2page-api
-          property: host
+        value: https://prompt2page-api.onrender.com
     # Redirect all routes to index.html for React SPA
     routes:
       - type: rewrite
