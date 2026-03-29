@@ -5,12 +5,11 @@ let BASE_URL = 'http://localhost:5000/api';
 const envBase = import.meta.env.VITE_API_BASE_URL;
 
 if (envBase) {
+  // VITE_API_BASE_URL is injected at build time from render.yaml (property: host)
+  // Render's `host` property returns just the hostname, so we prepend https://
   const needsProtocol = !envBase.startsWith('http://') && !envBase.startsWith('https://');
   const host = needsProtocol ? `https://${envBase}` : envBase;
   BASE_URL = host.endsWith('/api') ? host : `${host}/api`;
-} else if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
-  // Hardcoded to exact known Render API URL to bypass random suffix mapping issues
-  BASE_URL = 'https://prompt2page-api-sqaa.onrender.com/api';
 }
 
 const getHeaders = () => {
