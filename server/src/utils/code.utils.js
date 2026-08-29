@@ -47,8 +47,17 @@ export const parseGenerationResponse = (responseText) => {
 export const parseMultiFileResponse = (responseText) => {
   const files = {};
   let description = '';
+  const changes = [];
 
-  // Regex: matches ```lang:filename or ```lang (without filename)
+  // 1. Extract CHANGES_MADE section
+  const changesMatch = responseText.match(/CHANGES_MADE:([\s\S]*?)(?=```|$)/i);
+  if (changesMatch) {
+    const listText = changesMatch[1].trim();
+    const listLines = listText.split('\n').filter(l => l.trim().startsWith('-'));
+    listLines.forEach(l => changes.push(l.replace(/^- /, '').trim()));
+  }
+
+  // 2. Parse code blocks
   const blockRegex = /```(\w+)(?::([^\n]+))?\n([\s\S]*?)```/g;
   let firstBlockStart = Infinity;
   let match;
@@ -57,8 +66,8 @@ export const parseMultiFileResponse = (responseText) => {
   while ((match = blockRegex.exec(responseText)) !== null) {
     matches.push({
       fullMatch: match[0],
-      lang: match[1],         // e.g. 'html', 'css', 'js', 'javascript'
-      filename: match[2]?.trim(), // e.g. 'index.html' or undefined
+      lang: match[1],
+      filename: match[2]?.trim(),
       content: match[3].trim(),
       index: match.index,
     });
@@ -67,14 +76,15 @@ export const parseMultiFileResponse = (responseText) => {
     }
   }
 
-  // Extract description (text before first code block)
+  // 3. Extract description (text before first code block, excluding CHANGES_MADE)
   if (firstBlockStart !== Infinity) {
-    description = responseText.slice(0, firstBlockStart).trim();
+    let fullHeader = responseText.slice(0, firstBlockStart).trim();
+    description = fullHeader.replace(/CHANGES_MADE:[\s\S]*$/i, '').trim();
   } else {
-    description = responseText.trim();
+    description = responseText.replace(/CHANGES_MADE:[\s\S]*$/i, '').trim();
   }
 
-  // Map language to default filename
+  // 4. Map language to default filename (Mapping logic stays same)
   const langToFile = {
     html: 'index.html',
     css: 'styles.css',
@@ -84,12 +94,10 @@ export const parseMultiFileResponse = (responseText) => {
 
   for (const m of matches) {
     const filename = m.filename || langToFile[m.lang.toLowerCase()] || `${m.lang}.txt`;
-    // Normalize 'javascript' → use 'script.js' as key
-    const normalizedFilename = filename === 'script.js' ? 'script.js' : filename;
-    files[normalizedFilename] = m.content;
+    files[filename] = m.content;
   }
 
-  return { files, description };
+  return { files, description, changes };
 };
 
 // ──────────────────────────────────────────────
@@ -99,9 +107,17 @@ export const parseMultiFileResponse = (responseText) => {
 export const bundleFilesToHtml = (files) => {
   if (!files || typeof files !== 'object') return '';
 
-  const entries = files instanceof Map
-    ? Object.fromEntries(files)
-    : files;
+  let entries = files;
+  if (files instanceof Map) {
+    try {
+      entries = Object.fromEntries(files);
+    } catch(e) {
+      entries = {};
+      files.forEach((v, k) => entries[k] = v);
+    }
+  } else if (typeof files.toJSON === 'function') {
+    entries = files.toJSON();
+  }
 
   let html = entries['index.html'] || '';
   const css = entries['styles.css'] || '';
@@ -177,7 +193,16 @@ export const parseFixResponse = (responseText) => {
 // ──────────────────────────────────────────────
 export const mapToObject = (map) => {
   if (!map) return {};
-  if (map instanceof Map) return Object.fromEntries(map);
+  if (typeof map.toJSON === 'function') return map.toJSON();
+  if (map instanceof Map) {
+    try {
+      return Object.fromEntries(map);
+    } catch(e) {
+      const obj = {};
+      map.forEach((v, k) => obj[k] = v);
+      return obj;
+    }
+  }
   if (typeof map === 'object') return map;
   return {};
 };

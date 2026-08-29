@@ -6,6 +6,9 @@
   flex: 1;
   display: flex;
   height: calc(100vh - 88px);
+  max-height: calc(100vh - 88px);
+  min-height: 0;
+  min-width: 0;
   overflow: hidden;
   background: var(--color-bg);
   padding: 12px 16px 16px;
@@ -21,6 +24,8 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
   background: rgba(10, 9, 20, 0.4);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -363,6 +368,8 @@ input:checked + .slider:before {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
   overflow: hidden;
   background: rgba(10, 9, 20, 0.3);
   backdrop-filter: blur(12px);
@@ -1032,4 +1039,103 @@ input:checked + .slider:before {
   background: rgba(124, 58, 237, 0.15);
   border-color: var(--color-primary);
   color: var(--color-primary-light);
+}
+
+/* =============================================
+   MOBILE OVERRIDES — BUILDER
+   ============================================= */
+
+@media (max-width: 768px) {
+  .builder-page {
+    flex-direction: column;
+    height: calc(100vh - 56px); /* Adjusted for mobile navbar */
+    padding: 0;
+    gap: 0;
+  }
+
+  .builder-mobile-nav {
+    display: flex;
+    background: var(--color-bg-2);
+    border-bottom: 1px solid var(--color-border);
+    padding: 4px;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .mobile-nav-item {
+    flex: 1;
+    padding: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .mobile-nav-item.active {
+    background: var(--color-surface-hover);
+    color: var(--color-primary-light);
+  }
+
+  .builder-chat-panel, .builder-right-panel {
+    width: 100% !important;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    background: var(--color-bg);
+  }
+
+  .chat-panel-header {
+    padding: 12px 16px;
+  }
+
+  .chat-panel-title {
+    font-size: 1rem;
+  }
+
+  .chat-messages {
+    padding: 16px;
+  }
+
+  .chat-input-container {
+    padding: 12px;
+  }
+
+  .panel-toolbar {
+    padding: 8px 12px;
+  }
+
+  .panel-tabs {
+    padding: 2px;
+  }
+
+  .panel-tab {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  /* Version History on mobile: usually hidden or specific tab */
+  .version-history-panel {
+    padding: 12px;
+  }
+
+  /* Modals on mobile */
+  .modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Floating UI adjustments */
+  .toast-notification {
+    left: 12px;
+    right: 12px;
+    bottom: 80px; /* Above mobile nav if needed */
+  }
 }

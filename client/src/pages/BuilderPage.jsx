@@ -14,10 +14,14 @@ import PublishModal from '../components/PublishModal.jsx';
 import RefactorPanel from '../components/RefactorPanel.jsx';
 import DeployPanel from '../components/DeployPanel.jsx';
 import VisualEditor from '../components/VisualEditor.jsx';
+import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { useCollabSocket } from '../hooks/useCollabSocket.js';
+
+import PairModeToggle from '../components/PairModeToggle.jsx';
 
 import { getProject, updateProject } from '../services/projectService.js';
 import { generateCode } from '../services/generationService.js';
+import { sendPairMessageAPI } from '../services/pairProgrammerService.js';
 import { 
   getProjectVersionsAPI, 
   restoreVersionAPI, 
@@ -50,6 +54,10 @@ function BuilderPage() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState('');
 
+  // Pair Programmer Mode state
+  const [pairMode, setPairMode] = useState(false);
+  const [conversationPhase, setConversationPhase] = useState('idle'); // idle | questioning | implementing
+
   // Feature upgrades state
   const [versions, setVersions] = useState([]);
   const [isPublic, setIsPublic] = useState(false);
@@ -66,6 +74,16 @@ function BuilderPage() {
   const [deployStatus, setDeployStatus] = useState(null);
   const [deployUrl, setDeployUrl] = useState(null);
   const [deployLoading, setDeployLoading] = useState(false);
+  
+  // Responsive / Mobile state
+  const [mobileTab, setMobileTab] = useState('chat'); // chat | preview | code
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Phase 9 Collab socket hook
   const handleIncomingCode = (newFiles, changedFile, from) => {
@@ -97,6 +115,7 @@ function BuilderPage() {
         setFiles(data.files || {});
         setTitleInput(data.title);
         setIsPublic(data.isPublic || false);
+        setPairMode(data.pairMode || false);
         setDeployStatus(data.deployStatus || null);
         setDeployUrl(data.deployUrl || null);
         
@@ -120,30 +139,72 @@ function BuilderPage() {
 
   /* ================= HANDLERS ================= */
 
-  const handleSend = async (prompt) => {
+  const handleSend = async (prompt, options = {}) => {
+    const { answers = null } = options;
     const userMsg = { role: 'user', content: prompt, timestamp: new Date() };
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
     try {
-      const result = await generateCode(projectId, prompt);
-      setMessages(result.messages);
-      setCode(result.code);
-      setFiles(result.files);
-      setProject((prev) => ({ ...prev, title: result.title }));
-      setTitleInput(result.title);
+      if (pairMode) {
+        const result = await sendPairMessageAPI(projectId, prompt, conversationPhase, answers);
+        
+        // Handle different pair mode outcomes
+        if (result.mode === 'question') {
+          setMessages(result.messages);
+          setConversationPhase('questioning');
+        } else if (result.mode === 'code') {
+          setMessages(result.messages);
+          setCode(result.code);
+          setFiles(result.files);
+          setProject((prev) => ({ ...prev, title: result.title }));
+          setTitleInput(result.title);
+          setConversationPhase('idle');
+          setActiveTab('preview');
+        } else if (result.mode === 'analysis') {
+          setMessages(result.messages);
+          setConversationPhase('idle');
+        }
+      } else {
+        // Direct Mode (Existing logic)
+        const result = await generateCode(projectId, prompt);
+        setMessages(result.messages);
+        setCode(result.code);
+        setFiles(result.files);
+        setProject((prev) => ({ ...prev, title: result.title }));
+        setTitleInput(result.title);
+        setActiveTab('preview');
+        setConversationPhase('idle');
+      }
       
       // Update versions list dynamically
       const verData = await getProjectVersionsAPI(projectId);
       setVersions(verData.versions || []);
       
-      setActiveTab('preview');
     } catch (err) {
       setMessages((prev) => prev.slice(0, -1));
       const msg = err.response?.data?.message || 'Generation failed. Try again.';
       showToast(msg, 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOptionClick = async (option) => {
+    // We send the label as the prompt, and the full option as answers context
+    const prompt = `I choose: ${option.label}`;
+    await handleSend(prompt, { answers: { selectedOption: option } });
+  };
+
+  const handlePairToggle = async () => {
+    const newMode = !pairMode;
+    try {
+      await updateProject(projectId, { pairMode: newMode });
+      setPairMode(newMode);
+      setConversationPhase('idle');
+      showToast(`Pair Mode ${newMode ? 'Enabled' : 'Disabled'}`, 'success');
+    } catch (err) {
+      showToast('Failed to toggle Pair Mode', 'error');
     }
   };
 
@@ -323,171 +384,243 @@ function BuilderPage() {
   }
 
   return (
-    <div className="builder-page">
+    <div className={`builder-page ${isMobile ? 'mobile' : ''}`}>
+      {isMobile && (
+        <div className="builder-mobile-nav">
+          <button 
+            className={`mobile-nav-item ${mobileTab === 'chat' ? 'active' : ''}`}
+            onClick={() => setMobileTab('chat')}
+          >
+            💬 Chat
+          </button>
+          <button 
+            className={`mobile-nav-item ${mobileTab === 'preview' ? 'active' : ''}`}
+            onClick={() => setMobileTab('preview')}
+          >
+            👁 Preview
+          </button>
+          <button 
+            className={`mobile-nav-item ${mobileTab === 'code' ? 'active' : ''}`}
+            onClick={() => setMobileTab('code')}
+          >
+            {'</> Code'}
+          </button>
+        </div>
+      )}
+
       {/* ---- LEFT: CHAT ---- */}
-      <div className="builder-chat-panel">
-        <div className="chat-panel-header">
-          <button className="chat-panel-back" onClick={() => navigate('/dashboard')}>
-            ← My Projects
-          </button>
-          
-          {editingTitle ? (
-            <input
-              className="chat-panel-title-input"
-              value={titleInput}
-              onChange={(e) => setTitleInput(e.target.value)}
-              onBlur={handleTitleSave}
-              onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
-              autoFocus
-            />
-          ) : (
-            <div className="chat-panel-title" onClick={() => setEditingTitle(true)} title="Click to rename">
-              {project?.title || 'Untitled Project'}
-            </div>
-          )}
-          
-          <div className="chat-panel-subtitle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-            <span>{messages.length} prompts sent</span>
-            <button className="panel-btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => setShowTemplates(true)}>
-              ✨ Templates
+      {(!isMobile || mobileTab === 'chat') && (
+        <div className="builder-chat-panel">
+          <div className="chat-panel-header">
+            <button className="chat-panel-back" onClick={() => navigate('/dashboard')}>
+              ← {isMobile ? '' : 'My Projects'}
             </button>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="chat-messages">
-          {messages.length === 0 ? (
-            <div className="chat-empty">
-              <div className="chat-empty-icon">✨</div>
-              <div className="chat-empty-title">What will you build today?</div>
-              <div className="chat-empty-subtitle">
-                Describe your app in plain English, or pick a template from above!
+            
+            {editingTitle ? (
+              <input
+                className="chat-panel-title-input"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+                autoFocus
+              />
+            ) : (
+              <div className="chat-panel-title" onClick={() => setEditingTitle(true)} title="Click to rename">
+                {project?.title || 'Untitled Project'}
               </div>
-              <button className="btn-primary" onClick={() => setShowTemplates(true)}>
-                Browse Prompt Templates
-              </button>
+            )}
+            
+            <div className="chat-panel-subtitle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+              <span>{messages.length} prompts sent</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <PairModeToggle pairMode={pairMode} onToggle={handlePairToggle} />
+                <button className="panel-btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => setShowTemplates(true)}>
+                  ✨ Templates
+                </button>
+              </div>
             </div>
-          ) : (
-            <>
-              {messages.map((msg, i) => (
-                <ChatMessage key={i} message={msg} />
-              ))}
-              {loading && (
-                <div className="chat-typing-indicator">
-                  <div className="chat-typing-dots">
-                    <span /><span /><span />
-                  </div>
-                  <span className="chat-typing-text">AI is working...</span>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </>
-          )}
-        </div>
-
-        {/* Input */}
-        <ChatInput onSend={handleSend} loading={loading} disabled={fetching} />
-      </div>
-
-      {/* ---- RIGHT: PREVIEW / CODE / HISTORY ---- */}
-      <div className="builder-right-panel">
-        <div className="panel-toolbar">
-          <div className="panel-tabs">
-            <button
-              className={`panel-tab ${activeTab === 'preview' ? 'active' : ''}`}
-              onClick={() => setActiveTab('preview')}
-            >
-              👁 Preview
-            </button>
-            <button
-              className={`panel-tab ${activeTab === 'code' ? 'active' : ''}`}
-              onClick={() => setActiveTab('code')}
-            >
-              {'</> Code'}
-            </button>
-            <button
-              className={`panel-tab ${activeTab === 'visual' ? 'active' : ''}`}
-              onClick={() => setActiveTab('visual')}
-            >
-              🪄 Visual
-            </button>
-            <button
-              className={`panel-tab ${activeTab === 'history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('history')}
-            >
-              ⏳ History
-            </button>
           </div>
-          
-          <div className="panel-toolbar-spacer" />
-          
-          {isConnected && (
-            <div className="collab-badge" title="Users collaborating right now">
-              <span className={`collab-badge-dot ${collabCount > 0 ? '' : 'offline'}`} />
-              {collabCount} {collabCount === 1 ? 'user' : 'users'}
-            </div>
-          )}
-          
-          {/* Tool Buttons */}
-          <button 
-            className={`panel-btn ${deployStatus === 'live' ? 'active' : ''}`} 
-            onClick={() => setShowDeploy(true)}
-            disabled={!code}
-          >
-            {deployStatus === 'live' ? '🌍 Deployed' : '🌍 Deploy'}
-          </button>
-          
-          <button 
-            className="panel-btn" 
-            onClick={() => setShowRefactor(true)}
-            disabled={!code || loading}
-          >
-            ✨ Refactor
-          </button>
-          
-          <button 
-            className={`panel-btn ${isPublic ? 'active' : ''}`} 
-            onClick={() => setShowPublish(true)}
-          >
-            {isPublic ? '🚀 Published' : '🚀 Publish'}
-          </button>
-          
-          <button 
-            className="panel-btn" 
-            onClick={handleExplain} 
-            disabled={!code || loading}
-          >
-            🔍 Explain
-          </button>
 
-          <button 
-            className="panel-btn" 
-            onClick={handleFix} 
-            disabled={!code || loading}
-          >
-            🧪 Fix AI Tweaks
-          </button>
+          {/* Messages */}
+          <div className="chat-messages">
+            {messages.length === 0 ? (
+              <div className="chat-empty">
+                <div className="chat-empty-icon">✨</div>
+                <div className="chat-empty-title">What will you build?</div>
+                <div className="chat-empty-subtitle">
+                  Describe your app and Gemini AI will build it.
+                </div>
+                {!isMobile && (
+                  <button className="btn-primary" onClick={() => setShowTemplates(true)}>
+                    Browse Prompt Templates
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                {messages.map((msg, i) => (
+                  <ChatMessage 
+                    key={i} 
+                    message={msg} 
+                    onOptionClick={handleOptionClick}
+                  />
+                ))}
+                {loading && (
+                  <div className="chat-typing-indicator">
+                    <div className="chat-typing-dots">
+                      <span /><span /><span />
+                    </div>
+                    <span className="chat-typing-text">AI is working...</span>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+          </div>
 
-          <button
-            className="panel-download-btn"
-            onClick={handleExportZip}
-            disabled={!code}
-          >
-            ↓ Export ZIP
-          </button>
+          {/* Input */}
+          <ChatInput onSend={handleSend} loading={loading} disabled={fetching} />
         </div>
+      )}
 
-        {activeTab === 'preview' && <LivePreview code={code} />}
-        {activeTab === 'visual' && <VisualEditor code={code} onCodeSync={handleVisualEditSync} />}
-        {activeTab === 'code' && <CodeEditor files={files} code={code} onChange={handleFileChange} readOnly={false} />}
-        {activeTab === 'history' && (
-          <VersionHistory 
-            versions={versions} 
-            onRestore={handleRestore} 
-            currentCode={code} 
-          />
-        )}
-      </div>
+      {/* ---- RIGHT: PREVIEW / CODE / HISTORY / VISUAL ---- */}
+      {(!isMobile || mobileTab === 'preview' || mobileTab === 'code') && (
+        <div className="builder-right-panel">
+          <div className="panel-toolbar">
+            <div className="panel-tabs">
+              {(isMobile ? mobileTab === 'preview' : true) && (
+                <button
+                  className={`panel-tab ${activeTab === 'preview' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('preview')}
+                >
+                  👁 Preview
+                </button>
+              )}
+              {(isMobile ? mobileTab === 'preview' : true) && (
+                <button
+                  className={`panel-tab ${activeTab === 'visual' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('visual')}
+                >
+                  🪄 Visual
+                </button>
+              )}
+              {(isMobile ? mobileTab === 'code' : true) && (
+                <button
+                  className={`panel-tab ${activeTab === 'code' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('code')}
+                >
+                  {'</> Code'}
+                </button>
+              )}
+              {(!isMobile) && (
+                <button
+                  className={`panel-tab ${activeTab === 'history' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('history')}
+                >
+                  ⏳ History
+                </button>
+              )}
+            </div>
+            
+            {!isMobile && (
+              <>
+                <div className="panel-toolbar-spacer" />
+                
+                {isConnected && (
+                  <div className="collab-badge" title="Users collaborating right now">
+                    <span className={`collab-badge-dot ${collabCount > 0 ? '' : 'offline'}`} />
+                    {collabCount} {collabCount === 1 ? 'user' : 'users'}
+                  </div>
+                )}
+                
+                {/* Tool Buttons */}
+                <button 
+                  className={`panel-btn ${deployStatus === 'live' ? 'active' : ''}`} 
+                  onClick={() => setShowDeploy(true)}
+                  disabled={!code}
+                >
+                  {deployStatus === 'live' ? '🌍 Deployed' : '🌍 Deploy'}
+                </button>
+                
+                <button 
+                  className="panel-btn" 
+                  onClick={() => setShowRefactor(true)}
+                  disabled={!code || loading}
+                >
+                  ✨ Refactor
+                </button>
+                
+                <button 
+                  className={`panel-btn ${isPublic ? 'active' : ''}`} 
+                  onClick={() => setShowPublish(true)}
+                >
+                  {isPublic ? '🚀 Published' : '🚀 Publish'}
+                </button>
+                
+                <button 
+                  className="panel-btn" 
+                  onClick={handleExplain} 
+                  disabled={!code || loading}
+                >
+                  🔍 Explain
+                </button>
+
+                <button 
+                  className="panel-btn" 
+                  onClick={handleFix} 
+                  disabled={!code || loading}
+                >
+                  🧪 Fix
+                </button>
+
+                <button
+                  className="panel-download-btn"
+                  onClick={handleExportZip}
+                  disabled={!code}
+                >
+                  ↓ Zip
+                </button>
+              </>
+            )}
+            
+            {isMobile && (
+              <div className="panel-toolbar-spacer" />
+            )}
+            
+            {isMobile && mobileTab === 'preview' && (
+              <button 
+                className="panel-btn active" 
+                onClick={() => setShowDeploy(true)}
+              >
+                🌍
+              </button>
+            )}
+            {isMobile && mobileTab === 'code' && (
+              <button
+                className="panel-download-btn"
+                onClick={handleExportZip}
+                disabled={!code}
+              >
+                ↓
+              </button>
+            )}
+          </div>
+
+          <ErrorBoundary>
+            {(activeTab === 'preview' && (isMobile ? mobileTab === 'preview' : true)) && <LivePreview code={code} />}
+            {(activeTab === 'visual' && (isMobile ? mobileTab === 'preview' : true)) && <VisualEditor code={code} onCodeSync={handleVisualEditSync} />}
+            {(activeTab === 'code' && (isMobile ? mobileTab === 'code' : true)) && <CodeEditor files={files} code={code} onChange={handleFileChange} readOnly={false} />}
+            {(!isMobile && activeTab === 'history') && (
+              <VersionHistory 
+                versions={versions} 
+                onRestore={handleRestore} 
+                currentCode={code} 
+              />
+            )}
+          </ErrorBoundary>
+        </div>
+      )}
 
       {/* ---- OVERLAYS & MODALS ---- */}
       {showTemplates && (

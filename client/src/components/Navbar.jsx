@@ -12,6 +12,7 @@ function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showSettings, setShowSettings] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -24,7 +25,7 @@ function Navbar() {
 
   return (
     <>
-      <nav className="navbar">
+      <nav className={`navbar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <Link to="/dashboard" className="navbar-brand">
           <div className="navbar-brand-icon">⚡</div>
           <span>Prompt2Page</span>
@@ -32,19 +33,36 @@ function Navbar() {
 
         <div className="navbar-spacer" />
 
-        <div className="navbar-links">
+        <div className={`navbar-links ${mobileMenuOpen ? 'show' : ''}`}>
           <Link
             to="/dashboard"
             className={`navbar-link ${location.pathname === '/dashboard' ? 'active' : ''}`}
+            onClick={() => setMobileMenuOpen(false)}
           >
             My Projects
           </Link>
+          {user && (
+            <button 
+              className="navbar-link mobile-only" 
+              onClick={() => { setShowSettings(true); setMobileMenuOpen(false); }}
+            >
+              AI Settings
+            </button>
+          )}
+          {user && (
+            <button 
+              className="navbar-link mobile-only logout" 
+              onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+            >
+              Logout
+            </button>
+          )}
         </div>
 
-        <div className="navbar-divider" />
+        <div className="navbar-divider hide-mobile" />
 
         {user && (
-          <div className="navbar-user">
+          <div className="navbar-user hide-mobile">
             <button
               className="navbar-settings-btn"
               onClick={() => setShowSettings(true)}
@@ -58,6 +76,15 @@ function Navbar() {
               Logout
             </button>
           </div>
+        )}
+
+        {user && (
+          <button 
+            className="navbar-mobile-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
         )}
       </nav>
 

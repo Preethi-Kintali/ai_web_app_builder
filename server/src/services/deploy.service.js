@@ -7,9 +7,8 @@ import { bundleFilesToHtml, mapToObject } from '../utils/code.utils.js';
 const mockDeploy = async (projectId, title) => {
   // Simulate async deploy delay
   await new Promise(r => setTimeout(r, 1200));
-  const slug = (title || 'app').toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 24);
   return {
-    url: `https://${slug}-${projectId.slice(-6)}.netlify.app`,
+    url: `/view/${projectId}`,
     status: 'live',
   };
 };
@@ -41,9 +40,7 @@ const netlifyDeploy = async (files, title) => {
   const fileDigests = {};
   const fileContents = {};
 
-  const entries = files instanceof Map
-    ? Object.fromEntries(files)
-    : files;
+  const entries = mapToObject(files);
 
   for (const [filename, content] of Object.entries(entries)) {
     const hash = createHash('sha1').update(content, 'utf8').digest('hex');

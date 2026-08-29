@@ -1,7 +1,7 @@
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
-let BASE_URL = 'http://localhost:5000/api';
+let BASE_URL = '/api';
 const envBase = import.meta.env.VITE_API_BASE_URL;
 
 if (envBase) {

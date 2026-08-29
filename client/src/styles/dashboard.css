@@ -319,7 +319,63 @@
   background: rgba(6, 182, 212, 0.15);
   border-color: var(--color-accent);
   transform: translateY(-2px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
+}
+
+/* ---- Responsive Dashboard ---- */
+@media (max-width: 1024px) {
+  .dashboard-page {
+    padding: 40px 24px;
+  }
+  
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 30px 16px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    gap: 16px;
+  }
+
+  .dashboard-title {
+    font-size: 1.8rem;
+  }
+
+  .btn-new-project {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 20px;
+  }
+
+  .stat-card-value {
+    font-size: 1.8rem;
+  }
+
+  .projects-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .project-card-preview {
+    height: 140px;
+  }
 }
 
 

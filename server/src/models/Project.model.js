@@ -76,6 +76,12 @@ const projectSchema = new mongoose.Schema(
       enum: [null, 'pending', 'live', 'failed'],
       default: null,
     },
+
+    // Feature: AI Pair Programmer Mode
+    pairMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

@@ -17,9 +17,10 @@ export const generateCode = async (req, res, next) => {
     
     // Normalize nested versions for the UI representation
     if (result.versions && Array.isArray(result.versions)) {
+      const { mapToObject } = await import('../utils/code.utils.js');
       result.versions = result.versions.map(v => ({
         ...v.toObject?.() || v,
-        files: (v.files instanceof Map ? Object.fromEntries(v.files) : v.files) || {}
+        files: mapToObject(v.files) || {}
       }));
     }
 

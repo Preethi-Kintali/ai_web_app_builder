@@ -25,7 +25,7 @@ function DeployPanel({ status, url, isMock, onDeploy, loading, onClose }) {
                   rel="noopener noreferrer"
                   style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 600, wordBreak: 'break-all' }}
                 >
-                  {url}
+                  {url?.startsWith('/') ? `${window.location.origin}${url}` : url}
                 </a>
               </div>
               

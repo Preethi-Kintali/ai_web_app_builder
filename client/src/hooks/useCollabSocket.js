@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
-const COLLAB_SERVER_URL = 'http://localhost:5000/collab';
+const COLLAB_SERVER_URL = '/collab';
 
 export function useCollabSocket(projectId, user, onCodeChange, onChatMessage) {
   const socketRef = useRef(null);

@@ -1,0 +1,1 @@
+fetch('https://prompt2page-api-sqaa.onrender.com/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Preethi', email: 'preethi15@gmail.com', password: 'password123' }) }).then(r => Promise.all([r.status, r.text()])).then(([s, t]) => console.log('STATUS:', s, 'BODY:', t)).catch(e => console.error(e));

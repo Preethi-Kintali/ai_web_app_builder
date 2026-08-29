@@ -27,7 +27,7 @@ export const fixCode = async (projectId, userId) => {
   // Archive current code before fixing
   project.versions.push({
     code: project.generatedCode || '',
-    files: hasMultiFile ? Object.fromEntries(project.files) : {},
+    files: hasMultiFile ? mapToObject(project.files) : {},
     changeDescription: 'Auto-fixed by AI',
     promptSnapshot: 'fix:auto',
   });

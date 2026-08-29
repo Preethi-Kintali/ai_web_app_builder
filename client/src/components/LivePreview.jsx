@@ -9,11 +9,32 @@ function LivePreview({ code }) {
     );
   }
 
+  // Inject script to prevent dummy links from navigating and blanking out the iframe
+  const injectLinkStopper = (html) => {
+    if (!html) return '';
+    const script = `
+      <script>
+        document.addEventListener('click', function(e) {
+          const t = e.target.closest('a');
+          if (t && (t.getAttribute('href') === '#' || t.getAttribute('href') === '')) {
+            e.preventDefault();
+          }
+        });
+      </script>
+    `;
+    if (html.includes('</body>')) {
+      return html.replace('</body>', `${script}\n</body>`);
+    }
+    return html + script;
+  };
+
+  const safeCode = injectLinkStopper(code);
+
   return (
     <div className="preview-container">
       <iframe
-        srcDoc={code}
-        sandbox="allow-scripts"
+        srcDoc={safeCode}
+        sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"
         title="Live Preview"
       />
     </div>

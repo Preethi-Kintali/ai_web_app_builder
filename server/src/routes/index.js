@@ -8,6 +8,7 @@ import publicRoutes from './public.routes.js';
 import refactorRoutes from './refactor.routes.js';
 import deployRoutes from './deploy.routes.js';
 import preferencesRoutes from './preferences.routes.js';
+import pairRoutes from './pair.routes.js';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/public', publicRoutes);
 router.use('/refactor', refactorRoutes);
 router.use('/deploy', deployRoutes);
 router.use('/preferences', preferencesRoutes);
+router.use('/pair', pairRoutes);
 
 export default router;

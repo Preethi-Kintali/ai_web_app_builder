@@ -40,7 +40,7 @@ export const refactorCode = async (projectId, userId, action) => {
   // Archive current before overwriting
   project.versions.push({
     code: project.generatedCode || '',
-    files: Object.fromEntries(project.files || new Map()),
+    files: mapToObject(project.files),
     changeDescription: `Refactored: ${action.replace(/-/g, ' ')}`,
     promptSnapshot: `refactor:${action}`,
   });

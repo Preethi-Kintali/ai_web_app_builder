@@ -77,6 +77,13 @@ function VisualEditor({ code, onCodeSync }) {
             if (shouldUpdate) setTimeout(makeEditable, 500);
           });
           observer.observe(document.body, { childList: true, subtree: true });
+          
+          document.addEventListener('click', function(e) {
+            const t = e.target.closest('a');
+            if (t && (t.getAttribute('href') === '#' || t.getAttribute('href') === '')) {
+              e.preventDefault();
+            }
+          });
         });
       </script>
     `;
